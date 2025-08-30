@@ -1,107 +1,24 @@
-Руководство по тестированию Django API в Postman
-Предварительная настройка
-1. Создание коллекции в Postman
-Откройте Postman
-Создайте новую коллекцию: Django News API
-В настройках коллекции создайте переменные:
-baseUrl: http://localhost:8000 (или ваш домен)
-access_token: (будет заполняться автоматически)
-refresh_token: (будет заполняться автоматически)
-test_user_id: (будет заполняться автоматически)
-2. Запуск Django сервера
-bash
-python manage.py runserver
-ЧАСТЬ 1: ТЕСТИРОВАНИЕ АУТЕНТИФИКАЦИИ (ACCOUNTS APP)
-1. Регистрация пользователя
+ЧАСТЬ 3: ТЕСТИРОВАНИЕ КОММЕНТАРИЕВ (COMMENTS APP)
+Предварительные исправления кода
+Перед тестированием необходимо исправить следующие ошибки в коде:
+
+В apps/comments/serializers.py:
+Строка 2: from .models import Comments должно быть from .models import Comment
+Строка 9: model = Comments должно быть model = Comment
+Строка 32: model = Comments должно быть model = Comment
+Строка 36: if not Post.objects.filter(id=value.id, status='pablished').exists(): должно быть status='published'
+Строка 49: model = Comments должно быть model = Comment
+Строка 51: field = ('content',) должно быть fields = ('content',)
+Строка 56: replise = serializers.SerializerMethodField() должно быть replies = serializers.SerializerMethodField()
+Строка 61: def get_replise(self, obj): должно быть def get_replies(self, obj):
+Строка 63: replise = obj.replise.filter(is_active=True).order_by('created_at') должно быть replies = obj.replies.filter(is_active=True).order_by('created_at')
+Строка 64: return CommentSerializer(replise, many=True, context=self.context).data должно быть return CommentSerializer(replies, many=True, context=self.context).data
+В apps/comments/views.py:
+Строка 76: if not Post.objects.filter(id=post_id, status='published').exists(): - убедитесь что это published, а не pablished
+Тестирование Comments API
+25. Создание комментария к посту
 Метод: POST
-URL: {{baseUrl}}/api/v1/auth/register/
-Headers:
-
-Content-Type: application/json
-Body (JSON):
-
-json
-{
-    "email": "test@example.com",
-    "username": "testuser",
-    "first_name": "Test",
-    "last_name": "User",
-    "password": "TestPassword123!",
-    "password_confirm": "TestPassword123!"
-}
-Ожидаемый ответ (201 Created):
-
-json
-{
-    "user": {
-        "id": 1,
-        "username": "testuser",
-        "email": "test@example.com",
-        "first_name": "Test",
-        "last_name": "User",
-        "full_name": "Test User",
-        "avatar": null,
-        "bio": "",
-        "created_at": "2025-08-27T12:00:00Z",
-        "updated_at": "2025-08-27T12:00:00Z",
-        "posts_count": 0,
-        "comments_count": 0
-    },
-    "refresh": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
-    "access": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
-    "message": "User registered successfully"
-}
-Test Script (Tests tab):
-
-javascript
-pm.test("Registration successful", function () {
-    pm.response.to.have.status(201);
-    const responseJson = pm.response.json();
-    pm.expect(responseJson).to.have.property('access');
-    pm.expect(responseJson).to.have.property('refresh');
-    pm.expect(responseJson.user).to.have.property('id');
-    
-    // Сохраняем токены и ID пользователя
-    pm.collectionVariables.set("access_token", responseJson.access);
-    pm.collectionVariables.set("refresh_token", responseJson.refresh);
-    pm.collectionVariables.set("test_user_id", responseJson.user.id);
-});
-2. Вход в систему
-Метод: POST
-URL: {{baseUrl}}/api/v1/auth/login/
-Headers:
-
-Content-Type: application/json
-Body (JSON):
-
-json
-{
-    "email": "test@example.com",
-    "password": "TestPassword123!"
-}
-Test Script:
-
-javascript
-pm.test("Login successful", function () {
-    pm.response.to.have.status(200);
-    const responseJson = pm.response.json();
-    pm.expect(responseJson).to.have.property('access');
-    pm.expect(responseJson).to.have.property('refresh');
-    
-    // Обновляем токены
-    pm.collectionVariables.set("access_token", responseJson.access);
-    pm.collectionVariables.set("refresh_token", responseJson.refresh);
-});
-3. Просмотр профиля
-Метод: GET
-URL: {{baseUrl}}/api/v1/auth/profile/
-Headers:
-
-Authorization: Bearer {{access_token}}
-Content-Type: application/json
-4. Обновление профиля
-Метод: PATCH
-URL: {{baseUrl}}/api/v1/auth/profile/
+URL: {{baseUrl}}/api/v1/comments/
 Headers:
 
 Authorization: Bearer {{access_token}}
@@ -110,171 +27,136 @@ Body (JSON):
 
 json
 {
-    "first_name": "UpdatedTest",
-    "bio": "This is my updated bio"
-}
-5. Смена пароля
-Метод: PUT
-URL: {{baseUrl}}/api/v1/auth/change-password/
-Headers:
-
-Authorization: Bearer {{access_token}}
-Content-Type: application/json
-Body (JSON):
-
-json
-{
-    "old_password": "TestPassword123!",
-    "new_password": "NewPassword123!",
-    "new_password_confirm": "NewPassword123!"
-}
-ЧАСТЬ 2: ТЕСТИРОВАНИЕ ОСНОВНОГО ФУНКЦИОНАЛА (MAIN APP)
-6. Создание категории
-Метод: POST
-URL: {{baseUrl}}/api/v1/posts/categories/
-Headers:
-
-Authorization: Bearer {{access_token}}
-Content-Type: application/json
-Body (JSON):
-
-json
-{
-    "name": "Technology",
-    "description": "Posts about technology and innovations"
+    "post": {{post_id}},
+    "content": "This is my first comment on this amazing post! Thanks for sharing such valuable information."
 }
 Ожидаемый ответ (201 Created):
 
 json
 {
     "id": 1,
-    "name": "Technology",
-    "slug": "technology",
-    "description": "Posts about technology and innovations",
-    "posts_count": 0,
-    "created_at": "2025-08-29T12:00:00Z"
-}
-Test Script:
-
-javascript
-pm.test("Category created successfully", function () {
-    pm.response.to.have.status(201);
-    const responseJson = pm.response.json();
-    pm.expect(responseJson).to.have.property('id');
-    pm.expect(responseJson.slug).to.eql('technology');
-    
-    // Сохраняем ID категории
-    pm.collectionVariables.set("category_id", responseJson.id);
-    pm.collectionVariables.set("category_slug", responseJson.slug);
-});
-7. Получение списка категорий
-Метод: GET
-URL: {{baseUrl}}/api/v1/posts/categories/
-Headers:
-
-Content-Type: application/json
-Test Script:
-
-javascript
-pm.test("Categories list retrieved", function () {
-    pm.response.to.have.status(200);
-    const responseJson = pm.response.json();
-    pm.expect(responseJson.results).to.be.an('array');
-});
-8. Получение конкретной категории
-Метод: GET
-URL: {{baseUrl}}/api/v1/posts/categories/{{category_slug}}/
-Headers:
-
-Content-Type: application/json
-9. Создание поста
-Метод: POST
-URL: {{baseUrl}}/api/v1/posts/
-Headers:
-
-Authorization: Bearer {{access_token}}
-Content-Type: application/json
-Body (JSON):
-
-json
-{
-    "title": "My First Tech Post",
-    "content": "This is a comprehensive article about the latest technology trends. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris.",
-    "category": {{category_id}},
-    "status": "published"
-}
-Ожидаемый ответ (201 Created):
-
-json
-{
-    "id": 1,
-    "title": "My First Tech Post",
-    "slug": "my-first-tech-post",
-    "content": "This is a comprehensive article about...",
-    "image": null,
-    "category": 1,
+    "content": "This is my first comment on this amazing post! Thanks for sharing such valuable information.",
     "author": 1,
-    "status": "published",
-    "created_at": "2025-08-29T12:05:00Z",
-    "updated_at": "2025-08-29T12:05:00Z",
-    "views_count": 0
+    "parent": null,
+    "is_active": true,
+    "replies_count": 0,
+    "is_reply": false,
+    "created_at": "2025-08-29T14:00:00Z",
+    "updated_at": "2025-08-29T14:00:00Z"
 }
 Test Script:
 
 javascript
-pm.test("Post created successfully", function () {
+pm.test("Comment created successfully", function () {
     pm.response.to.have.status(201);
     const responseJson = pm.response.json();
     pm.expect(responseJson).to.have.property('id');
-    pm.expect(responseJson.slug).to.eql('my-first-tech-post');
-    
-    // Сохраняем данные поста
-    pm.collectionVariables.set("post_id", responseJson.id);
-    pm.collectionVariables.set("post_slug", responseJson.slug);
+    pm.expect(responseJson.content).to.include('first comment');
+    pm.expect(responseJson.is_reply).to.be.false;
+    pm.expect(responseJson.replies_count).to.eql(0);
+
+    // Сохраняем ID комментария для дальнейших тестов
+    pm.collectionVariables.set("comment_id", responseJson.id);
 });
-10. Получение списка постов
+26. Создание ответа на комментарий
+Метод: POST
+URL: {{baseUrl}}/api/v1/comments/
+Headers:
+
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+Body (JSON):
+
+json
+{
+    "post": {{post_id}},
+    "parent": {{comment_id}},
+    "content": "Great comment! I totally agree with your point of view."
+}
+Test Script:
+
+javascript
+pm.test("Reply to comment created successfully", function () {
+    pm.response.to.have.status(201);
+    const responseJson = pm.response.json();
+    pm.expect(responseJson).to.have.property('id');
+    pm.expect(responseJson.parent).to.eql(parseInt(pm.collectionVariables.get("comment_id")));
+    pm.expect(responseJson.is_reply).to.be.true;
+
+    // Сохраняем ID ответа
+    pm.collectionVariables.set("reply_id", responseJson.id);
+});
+27. Получение списка всех комментариев
 Метод: GET
-URL: {{baseUrl}}/api/v1/posts/
+URL: {{baseUrl}}/api/v1/comments/
 Headers:
 
 Content-Type: application/json
 Query Parameters (опционально):
 
 page: 1
-search: technology
-category: {{category_id}}
+post: {{post_id}}
+search: amazing
 ordering: -created_at
 Test Script:
 
 javascript
-pm.test("Posts list retrieved", function () {
+pm.test("Comments list retrieved successfully", function () {
     pm.response.to.have.status(200);
     const responseJson = pm.response.json();
     pm.expect(responseJson).to.have.property('results');
     pm.expect(responseJson.results).to.be.an('array');
     pm.expect(responseJson).to.have.property('count');
+    pm.expect(responseJson).to.have.property('next');
+    pm.expect(responseJson).to.have.property('previous');
 });
-11. Получение конкретного поста
+28. Получение деталей комментария с ответами
 Метод: GET
-URL: {{baseUrl}}/api/v1/posts/{{post_slug}}/
+URL: {{baseUrl}}/api/v1/comments/{{comment_id}}/
 Headers:
 
 Content-Type: application/json
+Ожидаемый ответ (200 OK):
+
+json
+{
+    "id": 1,
+    "content": "This is my first comment...",
+    "author": 1,
+    "parent": null,
+    "is_active": true,
+    "replies_count": 1,
+    "is_reply": false,
+    "created_at": "2025-08-29T14:00:00Z",
+    "updated_at": "2025-08-29T14:00:00Z",
+    "replies": [
+        {
+            "id": 2,
+            "content": "Great comment! I totally agree...",
+            "author": 1,
+            "parent": 1,
+            "is_active": true,
+            "replies_count": 0,
+            "is_reply": true,
+            "created_at": "2025-08-29T14:05:00Z",
+            "updated_at": "2025-08-29T14:05:00Z"
+        }
+    ]
+}
 Test Script:
 
 javascript
-pm.test("Post detail retrieved", function () {
+pm.test("Comment detail with replies retrieved", function () {
     pm.response.to.have.status(200);
     const responseJson = pm.response.json();
     pm.expect(responseJson).to.have.property('id');
-    pm.expect(responseJson).to.have.property('title');
-    pm.expect(responseJson).to.have.property('author_info');
-    pm.expect(responseJson).to.have.property('category_info');
-    pm.expect(responseJson.views_count).to.be.a('number');
+    pm.expect(responseJson).to.have.property('replies');
+    pm.expect(responseJson.replies).to.be.an('array');
+    pm.expect(responseJson.replies_count).to.be.a('number');
 });
-12. Обновление поста
+29. Обновление комментария
 Метод: PATCH
-URL: {{baseUrl}}/api/v1/posts/{{post_slug}}/
+URL: {{baseUrl}}/api/v1/comments/{{comment_id}}/
 Headers:
 
 Authorization: Bearer {{access_token}}
@@ -283,116 +165,124 @@ Body (JSON):
 
 json
 {
-    "title": "Updated Tech Post Title",
-    "content": "This is the updated content of my technology post. Now with more detailed information about current trends."
+    "content": "This is my updated comment with additional thoughts and insights about the topic."
 }
 Test Script:
 
 javascript
-pm.test("Post updated successfully", function () {
+pm.test("Comment updated successfully", function () {
     pm.response.to.have.status(200);
     const responseJson = pm.response.json();
-    pm.expect(responseJson.title).to.eql('Updated Tech Post Title');
-    
-    // Обновляем slug если изменился
-    if (responseJson.slug) {
-        pm.collectionVariables.set("post_slug", responseJson.slug);
-    }
+    pm.expect(responseJson.content).to.include('updated comment');
+    pm.expect(responseJson.updated_at).to.not.eql(responseJson.created_at);
 });
-13. Получение постов пользователя
+30. Получение комментариев пользователя
 Метод: GET
-URL: {{baseUrl}}/api/v1/posts/my-posts/
+URL: {{baseUrl}}/api/v1/comments/my-comments/
 Headers:
 
 Authorization: Bearer {{access_token}}
 Content-Type: application/json
+Query Parameters (опционально):
+
+page: 1
+is_active: true
+search: updated
+ordering: -created_at
 Test Script:
 
 javascript
-pm.test("My posts retrieved", function () {
+pm.test("My comments retrieved successfully", function () {
     pm.response.to.have.status(200);
     const responseJson = pm.response.json();
     pm.expect(responseJson.results).to.be.an('array');
-    // Проверяем, что все посты принадлежат текущему пользователю
-    responseJson.results.forEach(function(post) {
-        pm.expect(post.author).to.eql(parseInt(pm.collectionVariables.get("test_user_id")));
+
+    // Проверяем, что все комментарии принадлежат текущему пользователю
+    const userId = parseInt(pm.collectionVariables.get("test_user_id"));
+    responseJson.results.forEach(function(comment) {
+        pm.expect(comment.author).to.eql(userId);
     });
 });
-14. Получение постов по категории
+31. Получение комментариев к конкретному посту
 Метод: GET
-URL: {{baseUrl}}/api/v1/posts/categories/{{category_slug}}/posts/
+URL: {{baseUrl}}/api/v1/comments/post/{{post_id}}/
 Headers:
 
 Content-Type: application/json
-Test Script:
-
-javascript
-pm.test("Posts by category retrieved", function () {
-    pm.response.to.have.status(200);
-    const responseJson = pm.response.json();
-    pm.expect(responseJson).to.have.property('category');
-    pm.expect(responseJson).to.have.property('posts');
-    pm.expect(responseJson.posts).to.be.an('array');
-    pm.expect(responseJson).to.have.property('pinned_posts_count');
-});
-15. Получение популярных постов
-Метод: GET
-URL: {{baseUrl}}/api/v1/posts/popular/
-Headers:
-
-Content-Type: application/json
-Test Script:
-
-javascript
-pm.test("Popular posts retrieved", function () {
-    pm.response.to.have.status(200);
-    const responseJson = pm.response.json();
-    pm.expect(responseJson).to.be.an('array');
-    pm.expect(responseJson.length).to.be.at.most(10);
-});
-16. Получение недавних постов
-Метод: GET
-URL: {{baseUrl}}/api/v1/posts/recent/
-Headers:
-
-Content-Type: application/json
-Test Script:
-
-javascript
-pm.test("Recent posts retrieved", function () {
-    pm.response.to.have.status(200);
-    const responseJson = pm.response.json();
-    pm.expect(responseJson).to.be.an('array');
-    pm.expect(responseJson.length).to.be.at.most(10);
-});
-17. Создание дополнительных постов для тестирования
-Метод: POST
-URL: {{baseUrl}}/api/v1/posts/
-Headers:
-
-Authorization: Bearer {{access_token}}
-Content-Type: application/json
-Body (JSON) - Пост 2:
+Ожидаемый ответ (200 OK):
 
 json
 {
-    "title": "AI and Machine Learning Trends",
-    "content": "Artificial Intelligence is rapidly evolving. This post covers the latest trends in machine learning, deep learning, and their applications in various industries.",
-    "category": {{category_id}},
-    "status": "published"
+    "post": {
+        "id": 1,
+        "title": "My First Tech Post",
+        "slug": "my-first-tech-post"
+    },
+    "comments": [
+        {
+            "id": 1,
+            "content": "This is my updated comment...",
+            "author": 1,
+            "parent": null,
+            "is_active": true,
+            "replies_count": 1,
+            "is_reply": false,
+            "created_at": "2025-08-29T14:00:00Z",
+            "updated_at": "2025-08-29T14:10:00Z",
+            "replies": [...]
+        }
+    ],
+    "comments_count": 2
 }
-Body (JSON) - Пост 3:
+Test Script:
 
-json
-{
-    "title": "Draft Post About Programming",
-    "content": "This is a draft post about programming best practices that I'm still working on.",
-    "category": {{category_id}},
-    "status": "draft"
-}
-18. Создание второй категории
+javascript
+pm.test("Post comments retrieved successfully", function () {
+    pm.response.to.have.status(200);
+    const responseJson = pm.response.json();
+    pm.expect(responseJson).to.have.property('post');
+    pm.expect(responseJson).to.have.property('comments');
+    pm.expect(responseJson).to.have.property('comments_count');
+    pm.expect(responseJson.comments).to.be.an('array');
+
+    // Проверяем структуру поста
+    pm.expect(responseJson.post).to.have.property('id');
+    pm.expect(responseJson.post).to.have.property('title');
+    pm.expect(responseJson.post).to.have.property('slug');
+
+    // Проверяем, что основные комментарии не имеют parent
+    responseJson.comments.forEach(function(comment) {
+        pm.expect(comment.parent).to.be.null;
+        pm.expect(comment.is_reply).to.be.false;
+    });
+});
+32. Получение ответов на комментарий
+Метод: GET
+URL: {{baseUrl}}/api/v1/comments/{{comment_id}}/replies/
+Headers:
+
+Content-Type: application/json
+Test Script:
+
+javascript
+pm.test("Comment replies retrieved successfully", function () {
+    pm.response.to.have.status(200);
+    const responseJson = pm.response.json();
+    pm.expect(responseJson).to.have.property('parent_comment');
+    pm.expect(responseJson).to.have.property('replies');
+    pm.expect(responseJson).to.have.property('replies_count');
+    pm.expect(responseJson.replies).to.be.an('array');
+
+    // Проверяем, что все ответы ссылаются на родительский комментарий
+    const parentId = parseInt(pm.collectionVariables.get("comment_id"));
+    responseJson.replies.forEach(function(reply) {
+        pm.expect(reply.parent).to.eql(parentId);
+        pm.expect(reply.is_reply).to.be.true;
+    });
+});
+33. Создание вложенного ответа (ответ на ответ)
 Метод: POST
-URL: {{baseUrl}}/api/v1/posts/categories/
+URL: {{baseUrl}}/api/v1/comments/
 Headers:
 
 Authorization: Bearer {{access_token}}
@@ -401,92 +291,149 @@ Body (JSON):
 
 json
 {
-    "name": "Science",
-    "description": "Scientific discoveries and research"
+    "post": {{post_id}},
+    "parent": {{reply_id}},
+    "content": "This is a nested reply to the previous response."
 }
-19. Тестирование поиска постов
-Метод: GET
-URL: {{baseUrl}}/api/v1/posts/?search=technology
-Headers:
-
-Content-Type: application/json
 Test Script:
 
 javascript
-pm.test("Search works correctly", function () {
-    pm.response.to.have.status(200);
+pm.test("Nested reply created successfully", function () {
+    pm.response.to.have.status(201);
     const responseJson = pm.response.json();
-    pm.expect(responseJson.results).to.be.an('array');
-    
-    // Проверяем, что результаты содержат поисковый термин
-    responseJson.results.forEach(function(post) {
-        const searchTerm = post.title.toLowerCase().includes('tech') || 
-                          post.content.toLowerCase().includes('tech');
-        pm.expect(searchTerm).to.be.true;
-    });
+    pm.expect(responseJson.parent).to.eql(parseInt(pm.collectionVariables.get("reply_id")));
+    pm.expect(responseJson.is_reply).to.be.true;
+
+    pm.collectionVariables.set("nested_reply_id", responseJson.id);
 });
-20. Тестирование фильтрации по категории
-Метод: GET
-URL: {{baseUrl}}/api/v1/posts/?category={{category_id}}
-Headers:
-
-Content-Type: application/json
-21. Тестирование сортировки
-Метод: GET
-URL: {{baseUrl}}/api/v1/posts/?ordering=-views_count
-Headers:
-
-Content-Type: application/json
-22. Удаление поста
+34. Мягкое удаление комментария
 Метод: DELETE
-URL: {{baseUrl}}/api/v1/posts/{{post_slug}}/
+URL: {{baseUrl}}/api/v1/comments/{{nested_reply_id}}/
 Headers:
 
 Authorization: Bearer {{access_token}}
 Test Script:
 
 javascript
-pm.test("Post deleted successfully", function () {
+pm.test("Comment soft deleted successfully", function () {
     pm.response.to.have.status(204);
 });
-23. Обновление категории
-Метод: PATCH
-URL: {{baseUrl}}/api/v1/posts/categories/{{category_slug}}/
+
+// Проверяем, что комментарий не отображается в списке активных
+pm.test("Deleted comment not in active list", function () {
+    pm.sendRequest({
+        url: pm.collectionVariables.get("baseUrl") + "/api/v1/comments/",
+        method: 'GET',
+        header: {
+            'Content-Type': 'application/json'
+        }
+    }, function (err, response) {
+        const deletedId = parseInt(pm.collectionVariables.get("nested_reply_id"));
+        const comments = response.json().results;
+        const deletedComment = comments.find(c => c.id === deletedId);
+        pm.expect(deletedComment).to.be.undefined;
+    });
+});
+Тестирование фильтрации и поиска комментариев
+35. Фильтрация комментариев по посту
+Метод: GET
+URL: {{baseUrl}}/api/v1/comments/?post={{post_id}}
 Headers:
 
-Authorization: Bearer {{access_token}}
 Content-Type: application/json
-Body (JSON):
+Test Script:
 
-json
-{
-    "name": "Advanced Technology",
-    "description": "Updated description for advanced technology topics"
-}
-24. Удаление категории
-Метод: DELETE
-URL: {{baseUrl}}/api/v1/posts/categories/{{category_slug}}/
+javascript
+pm.test("Comments filtered by post correctly", function () {
+    pm.response.to.have.status(200);
+    const responseJson = pm.response.json();
+    const postId = parseInt(pm.collectionVariables.get("post_id"));
+
+    responseJson.results.forEach(function(comment) {
+        pm.expect(comment.post).to.eql(postId);
+    });
+});
+36. Фильтрация комментариев по автору
+Метод: GET
+URL: {{baseUrl}}/api/v1/comments/?author={{test_user_id}}
 Headers:
 
-Authorization: Bearer {{access_token}}
-25. Выход из системы
+Content-Type: application/json
+Test Script:
+
+javascript
+pm.test("Comments filtered by author correctly", function () {
+    pm.response.to.have.status(200);
+    const responseJson = pm.response.json();
+    const authorId = parseInt(pm.collectionVariables.get("test_user_id"));
+
+    responseJson.results.forEach(function(comment) {
+        pm.expect(comment.author).to.eql(authorId);
+    });
+});
+37. Поиск комментариев по содержимому
+Метод: GET
+URL: {{baseUrl}}/api/v1/comments/?search=amazing
+Headers:
+
+Content-Type: application/json
+Test Script:
+
+javascript
+pm.test("Comment search works correctly", function () {
+    pm.response.to.have.status(200);
+    const responseJson = pm.response.json();
+    pm.expect(responseJson.results).to.be.an('array');
+
+    // Проверяем, что найденные комментарии содержат поисковый термин
+    responseJson.results.forEach(function(comment) {
+        pm.expect(comment.content.toLowerCase()).to.include('amazing');
+    });
+});
+38. Фильтрация только основных комментариев
+Метод: GET
+URL: {{baseUrl}}/api/v1/comments/?parent__isnull=true
+Headers:
+
+Content-Type: application/json
+Test Script:
+
+javascript
+pm.test("Main comments only filter works", function () {
+    pm.response.to.have.status(200);
+    const responseJson = pm.response.json();
+
+    responseJson.results.forEach(function(comment) {
+        pm.expect(comment.parent).to.be.null;
+        pm.expect(comment.is_reply).to.be.false;
+    });
+});
+39. Сортировка комментариев
+Метод: GET
+URL: {{baseUrl}}/api/v1/comments/?ordering=created_at
+Headers:
+
+Content-Type: application/json
+Test Script:
+
+javascript
+pm.test("Comments sorted correctly", function () {
+    pm.response.to.have.status(200);
+    const responseJson = pm.response.json();
+    const comments = responseJson.results;
+
+    if (comments.length > 1) {
+        for (let i = 1; i < comments.length; i++) {
+            const prev = new Date(comments[i-1].created_at);
+            const curr = new Date(comments[i].created_at);
+            pm.expect(curr.getTime()).to.be.at.least(prev.getTime());
+        }
+    }
+});
+Тестирование прав доступа и безопасности
+40. Попытка создания комментария без авторизации
 Метод: POST
-URL: {{baseUrl}}/api/v1/auth/logout/
-Headers:
-
-Authorization: Bearer {{access_token}}
-Content-Type: application/json
-Body (JSON):
-
-json
-{
-    "refresh_token": "{{refresh_token}}"
-}
-ТЕСТИРОВАНИЕ ОШИБОК И ГРАНИЧНЫХ СЛУЧАЕВ
-Тестирование прав доступа
-26. Попытка создания поста без авторизации
-Метод: POST
-URL: {{baseUrl}}/api/v1/posts/
+URL: {{baseUrl}}/api/v1/comments/
 Headers:
 
 Content-Type: application/json
@@ -494,8 +441,8 @@ Body (JSON):
 
 json
 {
-    "title": "Unauthorized Post",
-    "content": "This should fail"
+    "post": {{post_id}},
+    "content": "Unauthorized comment"
 }
 Ожидаемый ответ (401 Unauthorized):
 
@@ -503,27 +450,55 @@ json
 {
     "detail": "Authentication credentials were not provided."
 }
-27. Попытка редактирования чужого поста
-Создайте второго пользователя и попробуйте отредактировать пост первого пользователя.
+41. Попытка редактирования чужого комментария
+Сначала создайте второго пользователя и его комментарий, затем попробуйте отредактировать комментарий первого пользователя.
 
-Тестирование валидации
-28. Создание поста с пустым заголовком
+Создание второго пользователя:
+
 Метод: POST
-URL: {{baseUrl}}/api/v1/posts/
-Headers:
-
-Authorization: Bearer {{access_token}}
-Content-Type: application/json
+URL: {{baseUrl}}/api/v1/auth/register/
 Body (JSON):
 
 json
 {
-    "title": "",
-    "content": "Post without title"
+    "email": "user2@example.com",
+    "username": "testuser2",
+    "first_name": "Second",
+    "last_name": "User",
+    "password": "TestPassword123!",
+    "password_confirm": "TestPassword123!"
 }
-29. Создание категории с дублирующимся именем
+Test Script:
+
+javascript
+pm.test("Second user registered", function () {
+    pm.response.to.have.status(201);
+    const responseJson = pm.response.json();
+    pm.collectionVariables.set("user2_access_token", responseJson.access);
+});
+Попытка редактирования чужого комментария:
+
+Метод: PATCH
+URL: {{baseUrl}}/api/v1/comments/{{comment_id}}/
+Headers:
+
+Authorization: Bearer {{user2_access_token}}
+Content-Type: application/json
+Body (JSON):
+
+json
+{
+    "content": "Trying to edit someone else's comment"
+}
+Ожидаемый ответ (403 Forbidden):
+
+json
+{
+    "detail": "You do not have permission to perform this action."
+}
+42. Создание комментария к несуществующему посту
 Метод: POST
-URL: {{baseUrl}}/api/v1/posts/categories/
+URL: {{baseUrl}}/api/v1/comments/
 Headers:
 
 Authorization: Bearer {{access_token}}
@@ -532,212 +507,268 @@ Body (JSON):
 
 json
 {
-    "name": "Technology"
+    "post": 99999,
+    "content": "Comment to non-existent post"
 }
 Ожидаемый ответ (400 Bad Request):
 
 json
 {
-    "name": ["Category with this Name already exists."]
+    "post": ["Post not found"]
 }
-Тестирование пагинации
-30. Тестирование пагинации постов
+43. Создание ответа на комментарий из другого поста
+Метод: POST
+URL: {{baseUrl}}/api/v1/comments/
+Headers:
+
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+Создайте сначала второй пост и получите его ID, затем:
+
+Body (JSON):
+
+json
+{
+    "post": {{post2_id}},
+    "parent": {{comment_id}},
+    "content": "Invalid cross-post reply"
+}
+Ожидаемый ответ (400 Bad Request):
+
+json
+{
+    "parent": ["Parent comment must belong to the same post"]
+}
+Тестирование специальных эндпоинтов
+44. Комментарии к черновику поста
+Создайте пост со статусом 'draft', затем попробуйте создать к нему комментарий:
+
+Метод: POST
+URL: {{baseUrl}}/api/v1/comments/
+Headers:
+
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+Body (JSON):
+
+json
+{
+    "post": {{draft_post_id}},
+    "content": "Comment to draft post"
+}
+Ожидаемый ответ (400 Bad Request):
+
+json
+{
+    "post": ["Post not found"]
+}
+45. Создание множественных комментариев для тестирования пагинации
+Pre-request Script для массового создания:
+
+javascript
+const comments = [
+    "Excellent article! Very informative.",
+    "I disagree with some points made here.",
+    "Could you provide more examples?",
+    "This helped me understand the topic better.",
+    "Looking forward to more posts like this.",
+    "Great writing style and clear explanations.",
+    "I have a question about the second paragraph.",
+    "Thanks for sharing your expertise!",
+    "This is exactly what I was looking for.",
+    "Please write more about this topic."
+];
+
+pm.globals.set("test_comments", JSON.stringify(comments));
+pm.globals.set("current_comment_index", "0");
+46. Тестирование пагинации комментариев
 Метод: GET
-URL: {{baseUrl}}/api/v1/posts/?page=1&page_size=5
+URL: {{baseUrl}}/api/v1/comments/?page=1&page_size=5
 Headers:
 
 Content-Type: application/json
 Test Script:
 
 javascript
-pm.test("Pagination works correctly", function () {
+pm.test("Comments pagination works correctly", function () {
     pm.response.to.have.status(200);
     const responseJson = pm.response.json();
     pm.expect(responseJson).to.have.property('count');
     pm.expect(responseJson).to.have.property('next');
     pm.expect(responseJson).to.have.property('previous');
     pm.expect(responseJson.results.length).to.be.at.most(5);
+
+    // Если есть следующая страница, проверяем ссылку
+    if (responseJson.next) {
+        pm.expect(responseJson.next).to.include('page=2');
+    }
 });
-РАСШИРЕННОЕ ТЕСТИРОВАНИЕ
-Создание тестовых данных
-31. Создание множественных постов для тестирования
-Создайте скрипт для массового создания постов:
-
-Pre-request Script:
-
-javascript
-const posts = [
-    { title: "JavaScript Frameworks in 2025", content: "Exploring the latest JavaScript frameworks..." },
-    { title: "Python for Data Science", content: "How Python is revolutionizing data analysis..." },
-    { title: "Cloud Computing Trends", content: "The future of cloud infrastructure..." },
-    { title: "Cybersecurity Best Practices", content: "Protecting your applications from threats..." },
-    { title: "Mobile App Development", content: "Native vs Cross-platform development..." }
-];
-
-pm.globals.set("test_posts", JSON.stringify(posts));
-pm.globals.set("current_post_index", "0");
-Тестирование производительности
-32. Тест загрузки множественных постов
+Тестирование интеграции с другими приложениями
+47. Проверка счетчика комментариев в посте
 Метод: GET
-URL: {{baseUrl}}/api/v1/posts/?page_size=50
-
-Test Script:
-
-javascript
-pm.test("Response time is acceptable", function () {
-    pm.expect(pm.response.responseTime).to.be.below(2000);
-});
-
-pm.test("Large dataset loads correctly", function () {
-    pm.response.to.have.status(200);
-    const responseJson = pm.response.json();
-    pm.expect(responseJson.results).to.be.an('array');
-});
-Тестирование загрузки файлов
-33. Загрузка изображения для поста
-Метод: PATCH
 URL: {{baseUrl}}/api/v1/posts/{{post_slug}}/
 Headers:
 
-Authorization: Bearer {{access_token}}
-Body: form-data
+Content-Type: application/json
+Test Script:
 
-image: [выберите файл изображения]
-title: "Post with Image"
-Тестирование специальных эндпоинтов
-34. Тестирование счетчика просмотров
-Сделайте несколько GET запросов к одному посту и проверьте увеличение счетчика:
+javascript
+pm.test("Post shows correct comments count", function () {
+    pm.response.to.have.status(200);
+    const responseJson = pm.response.json();
+    pm.expect(responseJson).to.have.property('comments_count');
+    pm.expect(responseJson.comments_count).to.be.a('number');
+    pm.expect(responseJson.comments_count).to.be.at.least(0);
+});
+48. Проверка обновления счетчика после создания комментария
+Pre-request Script:
 
-Метод: GET
-URL: {{baseUrl}}/api/v1/posts/{{post_slug}}/
+javascript
+// Получаем текущее количество комментариев
+pm.sendRequest({
+    url: pm.collectionVariables.get("baseUrl") + "/api/v1/posts/" + pm.collectionVariables.get("post_slug") + "/",
+    method: 'GET',
+    header: {
+        'Content-Type': 'application/json'
+    }
+}, function (err, response) {
+    const currentCount = response.json().comments_count;
+    pm.globals.set("comments_count_before", currentCount);
+});
+Создайте новый комментарий, затем проверьте обновление счетчика:
 
 Test Script:
 
 javascript
-pm.test("Views counter increments", function () {
+pm.test("Comments count updated after creation", function () {
+    pm.response.to.have.status(201);
+
+    // Проверяем обновленный счетчик
+    pm.sendRequest({
+        url: pm.collectionVariables.get("baseUrl") + "/api/v1/posts/" + pm.collectionVariables.get("post_slug") + "/",
+        method: 'GET',
+        header: {
+            'Content-Type': 'application/json'
+        }
+    }, function (err, response) {
+        const newCount = response.json().comments_count;
+        const oldCount = parseInt(pm.globals.get("comments_count_before"));
+        pm.expect(newCount).to.eql(oldCount + 1);
+    });
+});
+Тестирование граничных случаев
+49. Создание комментария с пустым содержимым
+Метод: POST
+URL: {{baseUrl}}/api/v1/comments/
+Headers:
+
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+Body (JSON):
+
+json
+{
+    "post": {{post_id}},
+    "content": ""
+}
+Ожидаемый ответ (400 Bad Request):
+
+json
+{
+    "content": ["This field may not be blank."]
+}
+50. Создание комментария с очень длинным содержимым
+Метод: POST
+URL: {{baseUrl}}/api/v1/comments/
+Headers:
+
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+Pre-request Script:
+
+javascript
+// Генерируем длинный текст
+const longText = "A".repeat(5000);
+pm.globals.set("long_comment_text", longText);
+Body (JSON):
+
+json
+{
+    "post": {{post_id}},
+    "content": "{{long_comment_text}}"
+}
+51. Получение комментариев с различными параметрами сортировки
+Метод: GET
+URL: {{baseUrl}}/api/v1/comments/?ordering=updated_at
+Headers:
+
+Content-Type: application/json
+52. Тестирование комбинированных фильтров
+Метод: GET
+URL: {{baseUrl}}/api/v1/comments/?post={{post_id}}&ordering=-created_at&search=comment
+Headers:
+
+Content-Type: application/json
+Test Script:
+
+javascript
+pm.test("Combined filters work correctly", function () {
     pm.response.to.have.status(200);
     const responseJson = pm.response.json();
-    
-    // Сохраняем текущее количество просмотров
-    const currentViews = responseJson.views_count;
-    pm.globals.set("previous_views", currentViews);
-    
-    // При повторном вызове проверим увеличение
+    const postId = parseInt(pm.collectionVariables.get("post_id"));
+
+    responseJson.results.forEach(function(comment) {
+        pm.expect(comment.post).to.eql(postId);
+        pm.expect(comment.content.toLowerCase()).to.include('comment');
+    });
 });
-АВТОМАТИЗАЦИЯ ТЕСТИРОВАНИЯ
-Collection-level Pre-request Script
+Производительность и нагрузочное тестирование
+53. Тест времени отклика для получения комментариев
+Метод: GET
+URL: {{baseUrl}}/api/v1/comments/post/{{post_id}}/
+Headers:
+
+Content-Type: application/json
+Test Script:
+
 javascript
-// Проверяем наличие токена
-const token = pm.collectionVariables.get("access_token");
-if (!token && pm.info.requestName !== "Register" && pm.info.requestName !== "Login") {
-    console.log("Warning: No access token found for authenticated request");
+pm.test("Comments loading performance", function () {
+    pm.expect(pm.response.responseTime).to.be.below(1000);
+});
+
+pm.test("Response includes performance data", function () {
+    const responseJson = pm.response.json();
+    pm.expect(responseJson.comments_count).to.be.a('number');
+    console.log(`Loaded ${responseJson.comments_count} comments in ${pm.response.responseTime}ms`);
+});
+54. Тестирование глубокой вложенности комментариев
+Создайте цепочку вложенных ответов (комментарий → ответ → ответ на ответ):
+
+Метод: POST
+URL: {{baseUrl}}/api/v1/comments/
+Headers:
+
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+Body (JSON):
+
+json
+{
+    "post": {{post_id}},
+    "parent": {{comment_id}},
+    "content": "Level 1 reply"
 }
+Затем создайте ответ на этот ответ и так далее.
 
-// Логирование для отладки
-console.log(`Making request to: ${pm.request.url}`);
-console.log(`Method: ${pm.request.method}`);
-Collection-level Test Script
+Интеграционное тестирование
+55. Полный жизненный цикл комментария
+Pre-request Script для полного теста:
+
 javascript
-// Общие тесты для всех запросов
-pm.test("Response has valid JSON structure", function () {
-    pm.response.to.be.json;
-});
-
-pm.test("No server errors", function () {
-    pm.response.to.not.have.status(500);
-});
-
-// Логирование ошибок
-if (pm.response.code >= 400) {
-    console.log("Error response:", pm.response.json());
-}
-ПОСЛЕДОВАТЕЛЬНОСТЬ ПОЛНОГО ТЕСТИРОВАНИЯ
-Настройка пользователя:
-Регистрация → сохранить токены
-Просмотр профиля → проверить данные
-Создание контента:
-Создание категории → сохранить ID и slug
-Создание нескольких постов
-Создание черновика
-Чтение контента:
-Получение всех постов
-Получение постов по категории
-Популярные посты
-Недавние посты
-Мои посты
-Обновление контента:
-Редактирование поста
-Обновление категории
-Тестирование функций:
-Поиск по постам
-Фильтрация
-Сортировка
-Пагинация
-Тестирование ошибок:
-Неавторизованный доступ
-Редактирование чужого контента
-Невалидные данные
-Очистка:
-Удаление постов
-Удаление категорий
-Выход из системы
-ДОПОЛНИТЕЛЬНЫЕ СОВЕТЫ
-Переменные среды
-Создайте разные среды:
-
-Development: http://localhost:8000
-Testing: http://localhost:8001
-Production: https://yourdomain.com
-Тестирование загрузки файлов
-Для загрузки аватара или изображений постов:
-
-Используйте Content-Type: multipart/form-data
-Добавьте файл в соответствующее поле
-Массовое тестирование
-Используйте Newman (CLI для Postman) для автоматического запуска тестов:
-
-bash
-newman run collection.json -e environment.json
-Мониторинг API
-Настройте мониторы в Postman Cloud для автоматической проверки доступности API.
-
-ИСПРАВЛЕНИЯ ОШИБОК В КОДЕ
-При тестировании могут обнаружиться следующие ошибки:
-
-В apps/accounts/serializer.py:
-Строка 23: return должно быть raise
-Строка 73: get_post_count должно быть get_posts_count
-Строка 76: pcomments должно быть comments
-Строка 103: attrs('new_passeord') должно быть attrs['new_password']
-В apps/accounts/views.py:
-Строка 24: Убрать (queryset) из UserRegistrationSerializer
-Строка 92: seriaizer должно быть serializer
-Строка 105: requset должно быть request
-В apps/main/serializers.py:
-Строка 14: get_posts_counts должно быть get_posts_count
-Строка 77: validated_data['author'] = self.context['requrst'].user - requrst должно быть request
-В apps/main/views.py:
-Отсутствует метод get_posts_for_feed() в модели Post
-Отсутствуют view функции pinned_posts_only и featured_posts упомянутые в urls.py
-В conf/urls.py:
-Строка 8: Добавьте / в конец пути: path('api/v1/auth/', include('apps.accounts.urls'))
-АВТОМАТИЗИРОВАННЫЕ ТЕСТЫ
-Runner Script для всей коллекции
-javascript
-// Этот скрипт запустит все тесты по порядку
-const tests = [
-    'Register',
-    'Login', 
-    'Create Category',
-    'Create Post',
-    'Get Posts List',
-    'Get Post Detail',
-    'Update Post',
-    'My Posts',
-    'Popular Posts',
-    'Logout'
-];
-
-// Установите порядок выполнения в Collection Runner
-Это полное руководство покрывает все аспекты тестирования вашего Django API через Postman, включая как базовую аутентификацию, так и полный функционал блога с постами и категориями.
-
+// Создаем новый пост специально для тестирования комментариев
+pm.sendRequest({
+    url: pm.collectionVariables.get("baseUrl") + "/api/v1/posts/",
+    method: 'POST',
+    header: {
+        'Authorization': 'Bearer ' + pm.collectionVariables.get("access_token"),
+        'Content-Type':
