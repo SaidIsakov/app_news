@@ -14,11 +14,11 @@ class CategorySerializer(serializers.ModelSerializer):
 
     def get_posts_count(self, obj):
         return obj.posts.filter(status='published').count()
-    
+
     def create(self, validated_data):
         validated_data['slug'] = slugify(validated_data['name'])
         return super().create(validated_data)
-    
+
 
 class PostListSerializer(serializers.ModelSerializer):
     """Сериализатор для списка постов"""
@@ -47,7 +47,7 @@ class PostListSerializer(serializers.ModelSerializer):
         if len(data['content']) > 200:
             data['content'] = data['content'][:200] + '...'
         return data
-    
+
 class PostDetailSerializer(serializers.ModelSerializer):
     """Сериализатор для детального просмотра поста"""
     author_info = serializers.SerializerMethodField()
@@ -75,7 +75,7 @@ class PostDetailSerializer(serializers.ModelSerializer):
             'full_name': author.full_name,
             'avatar': author.avatar.url if author.avatar else None
         }
-    
+
     def get_category_info(self, obj):
         if obj.category:
             return {
@@ -84,10 +84,10 @@ class PostDetailSerializer(serializers.ModelSerializer):
                 'slug': obj.category.slug,
             }
         return None
-    
+
     def get_pinned_info(self, obj):
         return obj.get_pinned_info()
-    
+
     def get_can_pin(self, obj):
         """Проверяет, может ли текущий пользователь закрпить пост"""
         request = self.context.get('request')
@@ -98,7 +98,7 @@ class PostDetailSerializer(serializers.ModelSerializer):
 
 class PostCreateUpdateSerializer(serializers.ModelSerializer):
     """Сериализатор для создания и обновления постов"""
-    
+
     class Meta:
         model = Post
         fields = ['title', 'content', 'image', 'category', 'status']
@@ -112,4 +112,3 @@ class PostCreateUpdateSerializer(serializers.ModelSerializer):
         if 'title' in validated_data:
             validated_data['slug'] = slugify(validated_data['title'])
         return super().update(instance, validated_data)
-    
