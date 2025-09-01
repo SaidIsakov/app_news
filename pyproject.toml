@@ -17,4 +17,5 @@ dependencies = [
     "pyjwt>=2.10.1",
     "python-decouple>=3.8",
     "redis>=6.4.0",
+    "stripe>=12.5.0",
 ]
